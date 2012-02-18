@@ -37,14 +37,27 @@ __STL_BEGIN_NAMESPACE
 template <class _Tp>
 pair<_Tp *, ptrdiff_t>
 __get_temporary_buffer(ptrdiff_t __len, _Tp *) {
+    // the max_size() is INT_MAX / sizeof(__Tp), so if __len is greater 
+    // than it, __len should be modified.
     if (__len > ptrdiff_t(INT_MAX / sizeof(_Tp))) {
         __len = INT_MAX / sizeof(_Tp);
     }
 
     while (__len > 0) {
+        // just allocate the memory using malloc.
         _Tp *__tmp = (_Tp *) malloc((size_t)__len * sizeof(_Tp));
 
         if (__tmp != 0) {
+            // allocate memory success. return the pointer and the lengh in 
+            // a pair.
+            //
+            // Now I know why it should return them into a pair, why the 
+            // __len should be return again. Because the user might require 
+            // lots of objects, but there are not enough memory for them. 
+            // so the number should be changed within the function. 
+            // Usually, there is enough memory, that is __len wouldn't 
+            // changed. But some times, it will. should we should return 
+            // the actually allocated number of objects.
             return pair<_Tp *, ptrdiff_t>(__tmp, __len);
         }
 
@@ -57,6 +70,10 @@ __get_temporary_buffer(ptrdiff_t __len, _Tp *) {
 #ifdef __STL_EXPLICIT_FUNCTION_TMPL_ARGS
 
 template <class _Tp>
+// Here we know, the type of the parameter is ptrdiff_t, not the template 
+// parameter type _Tp, and the type in the return type cannot be deduced, 
+// so whiling calling this function, we have to explicitly specified the 
+// template parameter.
 inline pair<_Tp *, ptrdiff_t> get_temporary_buffer(ptrdiff_t __len) {
     return __get_temporary_buffer(__len, (_Tp *) 0);
 }
@@ -75,6 +92,8 @@ inline pair<_Tp *, ptrdiff_t> get_temporary_buffer(ptrdiff_t __len, _Tp *) {
 
 template <class _Tp>
 void return_temporary_buffer(_Tp *__p) {
+    // the function is just an wrapper of free. But why doesn't  the 
+    // function inlined.
     free(__p);
 }
 

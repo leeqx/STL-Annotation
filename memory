@@ -42,7 +42,14 @@ private:
 public:
   typedef _Tp element_type;
 
+  // explicitly constructor. Just initialize the member _M_ptr by the 
+  // parameter.
   explicit auto_ptr(_Tp* __p = 0) __STL_NOTHROW : _M_ptr(__p) {}
+
+  // only one auto_ptr could have the owner ship of the pointer to heap, so 
+  // when the copy constructor is called, the parameter should release the 
+  // owner ship of the pointer to heap and pass the pointer to the data 
+  // member.
   auto_ptr(auto_ptr& __a) __STL_NOTHROW : _M_ptr(__a.release()) {}
 
 #ifdef __STL_MEMBER_TEMPLATES
@@ -50,9 +57,15 @@ public:
     : _M_ptr(__a.release()) {}
 #endif /* __STL_MEMBER_TEMPLATES */
 
+  // operator assignment.
   auto_ptr& operator=(auto_ptr& __a) __STL_NOTHROW {
     if (&__a != this) {
+        // the data member should first delete the object it points to, as 
+        // the data member could only point to one object.
       delete _M_ptr;
+
+      // the right hand side should first release the owner ship of the 
+      // object and pass it the to data member.
       _M_ptr = __a.release();
     }
     return *this;
@@ -70,37 +83,56 @@ public:
 #endif /* __STL_MEMBER_TEMPLATES */
 
   // Note: The C++ standard says there is supposed to be an empty throw
-  // specification here, but omitting it is standard conforming.  Its 
+  // specification here, but omitting it is standard conforming.  Its
   // presence can be detected only if _Tp::~_Tp() throws, but (17.4.3.6/2)
   // this is prohibited.
+  //
+  // simply calls the delete operator. the object in the heap where the 
+  // data member points to will call its destructor and then the allocator 
+  // will deallocate it.
   ~auto_ptr() { delete _M_ptr; }
 
+  // dereference the pointer. thus the auto_ptr could used as the normal 
+  // pointer.
   _Tp& operator*() const __STL_NOTHROW {
     return *_M_ptr;
   }
+
+  // just return the data member. same as get.
   _Tp* operator->() const __STL_NOTHROW {
     return _M_ptr;
   }
+
   _Tp* get() const __STL_NOTHROW {
     return _M_ptr;
   }
+
+  // release the owner ship of the object.
   _Tp* release() __STL_NOTHROW {
     _Tp* __tmp = _M_ptr;
+    // set the data member to 0. points nothing. thus lose the owner ship 
+    // of the object.
     _M_ptr = 0;
+
+    // return a pointer which points to the actual object.
     return __tmp;
   }
+
+  // set the data member to points to another object. and have the owner 
+  // ship of another object.
   void reset(_Tp* __p = 0) __STL_NOTHROW {
     if (__p != _M_ptr) {
+        // deallocate the object previously owned.
       delete _M_ptr;
       _M_ptr = __p;
     }
   }
 
   // According to the C++ standard, these conversions are required.  Most
-  // present-day compilers, however, do not enforce that requirement---and, 
-  // in fact, most present-day compilers do not support the language 
+  // present-day compilers, however, do not enforce that requirement---and,
+  // in fact, most present-day compilers do not support the language
   // features that these conversions rely on.
-  
+
 #if defined(__SGI_STL_USE_AUTO_PTR_CONVERSIONS) && \
     defined(__STL_MEMBER_TEMPLATES)
 
@@ -116,7 +148,7 @@ public:
     return *this;
   }
 
-  template <class _Tp1> operator auto_ptr_ref<_Tp1>() __STL_NOTHROW 
+  template <class _Tp1> operator auto_ptr_ref<_Tp1>() __STL_NOTHROW
     { return auto_ptr_ref<_Tp1>(this->release()); }
   template <class _Tp1> operator auto_ptr<_Tp1>() __STL_NOTHROW
     { return auto_ptr<_Tp1>(this->release()); }

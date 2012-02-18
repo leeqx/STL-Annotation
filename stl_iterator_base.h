@@ -39,6 +39,11 @@
 
 __STL_BEGIN_NAMESPACE
 
+// The five iterator tags just identify to which type the specific iterator
+// belongs. the forward_iterator_tag and bidirectional_iterator_tag,
+// random_access_iterator_tag use the inheritance machanism so that the
+// forward_iterator can be accepted by the parameter that accquire input
+// interator. the same for others.
 struct input_iterator_tag {};
 struct output_iterator_tag {};
 struct forward_iterator_tag : public input_iterator_tag {};
@@ -92,6 +97,12 @@ template <class _Tp, class _Distance> struct random_access_iterator {
 };
 
 #ifdef __STL_USE_NAMESPACES
+// every iterator should at least have the following five member. so here
+// only define a structure without any data or functions. It is used to be
+// inherited.
+//
+// The last three template parameter has the default parameter, so only the
+// first two should be given the value while initialize the template.
 template < class _Category, class _Tp, class _Distance = ptrdiff_t,
          class _Pointer = _Tp *, class _Reference = _Tp & >
 struct iterator {
@@ -105,6 +116,8 @@ struct iterator {
 
 #ifdef __STL_CLASS_PARTIAL_SPECIALIZATION
 
+// What an amazing design! retrieve the type related with the type pointed
+// by the iterator.
 template <class _Iterator>
 struct iterator_traits {
     typedef typename _Iterator::iterator_category iterator_category;
@@ -115,6 +128,11 @@ struct iterator_traits {
 };
 
 template <class _Tp>
+// partial template specialization for the pointers in case of the pointers
+// falls into the generic template defined above.
+//
+// notice that, given the _Tp *, the iterator category is random access
+// iterator.
 struct iterator_traits<_Tp *> {
     typedef random_access_iterator_tag iterator_category;
     typedef _Tp                         value_type;
@@ -124,6 +142,13 @@ struct iterator_traits<_Tp *> {
 };
 
 template <class _Tp>
+// another nice design. If we don't have this partial template
+// specialization, then const _Tp * will falls into the _Tp * catagory. wei
+// can have the right type of _Tp, but we cannot have the right type of the
+// const _Tp * and const _Tp &.
+//
+// notice that, given the type of const _Tp *, the category of the iterator
+// is random access iterator.
 struct iterator_traits<const _Tp *> {
     typedef random_access_iterator_tag iterator_category;
     typedef _Tp                         value_type;
@@ -140,6 +165,7 @@ struct iterator_traits<const _Tp *> {
 // We introduce internal names for these functions.
 
 template <class _Iter>
+// get the category of the given iterator passed as the parameter.
 inline typename iterator_traits<_Iter>::iterator_category
 __iterator_category(const _Iter &) {
     typedef typename iterator_traits<_Iter>::iterator_category _Category;
@@ -147,6 +173,7 @@ __iterator_category(const _Iter &) {
 }
 
 template <class _Iter>
+// why we get the pointer to the type instead of the type itself?
 inline typename iterator_traits<_Iter>::difference_type *
 __distance_type(const _Iter &) {
     return static_cast<typename iterator_traits<_Iter>::difference_type *>(0);
@@ -166,6 +193,8 @@ iterator_category(const _Iter &__i) {
 
 
 template <class _Iter>
+// does the wrapper necessary? it is nearly the same as the function to be
+// called, same argument list and same return type.
 inline typename iterator_traits<_Iter>::difference_type *
 distance_type(const _Iter &__i) {
     return __distance_type(__i);
@@ -183,6 +212,7 @@ value_type(const _Iter &__i) {
 
 #else /* __STL_CLASS_PARTIAL_SPECIALIZATION */
 
+// overloaded function determine the category of the iterator.
 template <class _Tp, class _Distance>
 inline input_iterator_tag
 iterator_category(const input_iterator<_Tp, _Distance>&) {
@@ -216,6 +246,7 @@ inline random_access_iterator_tag iterator_category(const _Tp *) {
     return random_access_iterator_tag();
 }
 
+// various overloaded function determine the value_type
 template <class _Tp, class _Distance>
 inline _Tp *value_type(const input_iterator<_Tp, _Distance>&) {
     return (_Tp *)(0);
