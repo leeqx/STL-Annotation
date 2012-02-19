@@ -980,6 +980,8 @@ const bool _Alloc_traits<_Tp, _Allocator>::_S_instanceless;
 // The version for the default allocator.
 
 template <class _Tp, class _Tp1>
+// allocator<_Tp1> is the C++ defined default allocator, but with low
+// efficiency.
 struct _Alloc_traits<_Tp, allocator<_Tp1> > {
     static const bool _S_instanceless = true;
     typedef simple_alloc<_Tp, alloc> _Alloc_type;
@@ -989,6 +991,8 @@ struct _Alloc_traits<_Tp, allocator<_Tp1> > {
 // Versions for the predefined SGI-style allocators.
 
 template <class _Tp, int __inst>
+// use the first SGI predefined malloc allocator.
+// and this is a partial template specilization.
 struct _Alloc_traits<_Tp, __malloc_alloc_template<__inst> > {
     static const bool _S_instanceless = true;
     typedef simple_alloc<_Tp, __malloc_alloc_template<__inst> > _Alloc_type;

@@ -80,6 +80,11 @@ protected:
 
 // Specialization for allocators that have the property that we don't
 // actually have to store an allocator object.
+//
+// This is called the static allocator, there may be 5 vector objects, but
+// only one allocator, allocating and deallocating for all the 5 vectors.
+// So the vector objects itself don't have to store the allocator object,
+// they are using a common one.
 template <class _Tp, class _Allocator>
 class _Vector_alloc_base<_Tp, _Allocator, true> {
 public:
@@ -89,6 +94,11 @@ public:
         return allocator_type();
     }
 
+    // there is no object stored in the class, no operation is performed
+    // with the parameter, thus, name of the parameter is unnecessary.
+    //
+    // But we can not omit the parameter, because we have to provide the
+    // same interface as above, the generic template class.
     _Vector_alloc_base(const allocator_type &)
         : _M_start(0), _M_finish(0), _M_end_of_storage(0)
     {}
@@ -100,6 +110,8 @@ protected:
 
     typedef typename _Alloc_traits<_Tp, _Allocator>::_Alloc_type _Alloc_type;
     _Tp *_M_allocate(size_t __n) {
+        // there is no allocator object stored in this class, so, just
+        // call from the parameter argument's member funcition.
         return _Alloc_type::allocate(__n);
     }
     void _M_deallocate(_Tp *__p, size_t __n) {
@@ -117,6 +129,9 @@ struct _Vector_base
     typedef typename _Base::allocator_type allocator_type;
 
     _Vector_base(const allocator_type &__a) : _Base(__a) {}
+
+    // allocate __n * sizeof _Tp bytes of memory ahead with the given
+    // allocator. Storage is allocated, but not yet initialized.
     _Vector_base(size_t __n, const allocator_type &__a) : _Base(__a) {
         _M_start = _M_allocate(__n);
         _M_finish = _M_start;
@@ -186,11 +201,14 @@ public:
     typedef size_t size_type;
     typedef ptrdiff_t difference_type;
 
+    // every container is the STL has this function to get the allocator,
+    // passing by the template parameter.
     typedef typename _Base::allocator_type allocator_type;
     allocator_type get_allocator() const {
         return _Base::get_allocator();
     }
 
+    // type define the reverse iterator and const reverse iterator.
 #ifdef __STL_CLASS_PARTIAL_SPECIALIZATION
     typedef reverse_iterator<const_iterator> const_reverse_iterator;
     typedef reverse_iterator<iterator> reverse_iterator;
@@ -202,6 +220,7 @@ public:
 #endif /* __STL_CLASS_PARTIAL_SPECIALIZATION */
 
 protected:
+    // declare the functions defined _Base class.
 #ifdef __STL_HAS_NAMESPACES
     using _Base::_M_allocate;
     using _Base::_M_deallocate;
@@ -215,13 +234,20 @@ protected:
     void _M_insert_aux(iterator __position);
 
 public:
+    // the return type is an object, that is a right value, a temporary
+    // value, not return by reference.
     iterator begin() {
+        // _M_start: the pointer which points to the first element of the
+        // array. If the array hasn't been created, it is NULL. thus, the
+        // return value could be NULL.
         return _M_start;
     }
     const_iterator begin() const {
         return _M_start;
     }
     iterator end() {
+        // _M_finish points to the location after the last element of the
+        // array.
         return _M_finish;
     }
     const_iterator end() const {
@@ -229,6 +255,8 @@ public:
     }
 
     reverse_iterator rbegin() {
+        // It is a wrapper for reverse_iterator, which takes end()
+        // argument.
         return reverse_iterator(end());
     }
     const_reverse_iterator rbegin() const {
@@ -242,9 +270,11 @@ public:
     }
 
     size_type size() const {
+        // similar to _M_finish - _M_start
         return size_type(end() - begin());
     }
     size_type max_size() const {
+        // maximum number of objects the container could contains.
         return size_type(-1) / sizeof(_Tp);
     }
     size_type capacity() const {
@@ -254,10 +284,17 @@ public:
         return begin() == end();
     }
 
+    // the return type is a reference. thus the client can modified the
+    // internal value of the array.
     reference operator[](size_type __n) {
+        // random access iterator.
+        // there is no range checking here.
         return *(begin() + __n);
     }
+
+    // if the object is constant object, then this function will be called.
     const_reference operator[](size_type __n) const {
+        // there is not range checking here.
         return *(begin() + __n);
     }
 
@@ -268,6 +305,8 @@ public:
         }
     }
 
+    // similar to operator =(), but perform the range checking, with the
+    // cost of efficiency.
     reference at(size_type __n) {
         _M_range_check(__n);
         return (*this)[__n];
@@ -278,20 +317,30 @@ public:
     }
 #endif /* __STL_THROW_RANGE_ERRORS */
 
+    // the default constructor is explicit, initializing the allocator.
+    // It doesn't nothing else.
     explicit vector(const allocator_type &__a = allocator_type())
         : _Base(__a) {}
 
+    // fill n elements of value _value.
     vector(size_type __n, const _Tp &__value,
            const allocator_type &__a = allocator_type())
         : _Base(__n, __a) {
+            //calling uninitialized_fill_n to fill _n elements of value
+            //__value. It is the jov of uninitialized_fill_n to determine
+            //whether the type of __value is POD type or not.
         _M_finish = uninitialized_fill_n(_M_start, __n, __value);
     }
 
+    // the constructor that accept only one argument is also explicit.
+    // It fill the array with __n elements by calling their constructor if
+    // they have.
     explicit vector(size_type __n)
         : _Base(__n, allocator_type()) {
         _M_finish = uninitialized_fill_n(_M_start, __n, _Tp());
     }
 
+    // copy constructor.
     vector(const vector<_Tp, _Alloc>& __x)
         : _Base(__x.size(), __x.get_allocator()) {
         _M_finish = uninitialized_copy(__x.begin(), __x.end(), _M_start);
@@ -307,6 +356,10 @@ public:
     }
 
     template <class _Integer>
+    // the step of initialize is:
+    // 1. allocate enough memory to hold the objects
+    // 2. move the end_of_storage pointer
+    // 3. fill the memory with the specific value.
     void _M_initialize_aux(_Integer __n, _Integer __value, __true_type) {
         _M_start = _M_allocate(__n);
         _M_end_of_storage = _M_start + __n;
@@ -314,6 +367,7 @@ public:
     }
 
     template <class _InputIterator>
+    // initialize the memory with iterator.
     void _M_initialize_aux(_InputIterator __first, _InputIterator __last,
                            __false_type) {
         _M_range_initialize(__first, __last, __ITERATOR_CATEGORY(__first));
@@ -397,9 +451,13 @@ public:
 
     void push_back(const _Tp &__x) {
         if (_M_finish != _M_end_of_storage) {
+            // If we have enough free location to hold the new value, just
+            // put it back, and increase the indicator.
             construct(_M_finish, __x);
             ++_M_finish;
         } else {
+            // If we have no more free location to hold the new vlaue, we
+            // have to allocate new memory for it and perform the copy.
             _M_insert_aux(end(), __x);
         }
     }
@@ -411,6 +469,11 @@ public:
             _M_insert_aux(end());
         }
     }
+
+    // You can not image that sway two vector just swap the three pointer.
+    // However, it is reasonable. The array that holds the actual data is
+    // in the heap, and the only handle that can control the data is the
+    // three pointer.
     void swap(vector<_Tp, _Alloc>& __x) {
         __STD::swap(_M_start, __x._M_start);
         __STD::swap(_M_finish, __x._M_finish);
@@ -421,6 +484,7 @@ public:
         size_type __n = __position - begin();
 
         if (_M_finish != _M_end_of_storage && __position == end()) {
+            // insert at the back.
             construct(_M_finish, __x);
             ++_M_finish;
         } else {
@@ -474,10 +538,14 @@ public:
 
     void pop_back() {
         --_M_finish;
+        // call the destructor of the element, but the memory is not
+        // released.
         destroy(_M_finish);
     }
     iterator erase(iterator __position) {
         if (__position + 1 != end()) {
+            // the one to be erase it not the last element, thus need to
+            // copy every element one location forward.
             copy(__position + 1, _M_finish, __position);
         }
 
@@ -486,14 +554,19 @@ public:
         return __position;
     }
     iterator erase(iterator __first, iterator __last) {
+        // now I know why copy will return the iterator to the end of the
+        // range in the destination.
         iterator __i = copy(__last, _M_finish, __first);
         destroy(__i, _M_finish);
         _M_finish = _M_finish - (__last - __first);
         return __first;
     }
 
+    // the operation of reserve and resize is absolutely different.
     void resize(size_type __new_size, const _Tp &__x) {
         if (__new_size < size()) {
+            // the objects will be destructed, but the memory will not be
+            // released.
             erase(begin() + __new_size, end());
         } else {
             insert(end(), __new_size - size(), __x);
@@ -510,6 +583,8 @@ protected:
 
 #ifdef __STL_MEMBER_TEMPLATES
     template <class _ForwardIterator>
+    // allocate the memory that is enough to store __n of objects, and
+    // initialize it in the range [__first, __last).
     iterator _M_allocate_and_copy(size_type __n, _ForwardIterator __first,
                                   _ForwardIterator __last) {
         iterator __result = _M_allocate(__n);
@@ -568,6 +643,7 @@ protected:
 template <class _Tp, class _Alloc>
 inline bool
 operator==(const vector<_Tp, _Alloc>& __x, const vector<_Tp, _Alloc>& __y) {
+    // it compare each element and the number of the elements.
     return __x.size() == __y.size() &&
            equal(__x.begin(), __x.end(), __y.begin());
 }
@@ -575,6 +651,7 @@ operator==(const vector<_Tp, _Alloc>& __x, const vector<_Tp, _Alloc>& __y) {
 template <class _Tp, class _Alloc>
 inline bool
 operator<(const vector<_Tp, _Alloc>& __x, const vector<_Tp, _Alloc>& __y) {
+    // why?
     return lexicographical_compare(__x.begin(), __x.end(),
                                    __y.begin(), __y.end());
 }
