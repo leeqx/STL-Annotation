@@ -1,0 +1,12 @@
+we can initialize and container from stdin, for example:
+deque<int> coll((istream_iterator<int>(cin), (istream_iterator<int>())));
+Notice that, we have to add the extra paranthese here. otherwise, It may be 
+treated as a wrong function declaration.
+
+empty() of container is more efficient than testing (size() == 0)
+
+To check whether a container is less than another one, the lexicographical comparison is done.
+
+assignment of container is expensive.
+
+If the containers have the same type, and the source is no longer used, use swap() instead of assignment, swap() is constant time complexity.

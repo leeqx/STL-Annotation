@@ -1,0 +1,3 @@
+reverse_iterator is a wrapper for bidirectional iterator and random access iterator. the physical element to which the iterator points is the same as the original iterator. The only difference it that, while using the operator *, it return the element in the front of the one to which the inner iterator points. Thus simulate the reverse iterator. It has a high efficiency therefore.
+
+For the standard container, rbegin() refer to the end() as its inner iterator, and rend() refer to the begin() as its inner iterator. the reverse iterator grows backwards. that is from the end() to begin().

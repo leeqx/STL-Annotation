@@ -45,16 +45,20 @@ struct _List_node_base {
     _List_node_base *_M_prev;
 };
 
+// can you figure out why use inheritance here?
 template <class _Tp>
 struct _List_node : public _List_node_base {
     _Tp _M_data;
 };
 
+// a wrapper for the pointer to the base node. containing some operator 
+// overloading and some function.
 struct _List_iterator_base {
     typedef size_t                     size_type;
     typedef ptrdiff_t                  difference_type;
     typedef bidirectional_iterator_tag iterator_category;
 
+    // just a pointer to the base node, not containing the payload.
     _List_node_base *_M_node;
 
     _List_iterator_base(_List_node_base *__x) : _M_node(__x) {}
@@ -68,6 +72,7 @@ struct _List_iterator_base {
     }
 
     bool operator==(const _List_iterator_base &__x) const {
+        // check if they are reference to the same node.
         return _M_node == __x._M_node;
     }
     bool operator!=(const _List_iterator_base &__x) const {
@@ -77,6 +82,7 @@ struct _List_iterator_base {
 
 template<class _Tp, class _Ref, class _Ptr>
 struct _List_iterator : public _List_iterator_base {
+    // typedef for the general iterator, to meet the iterator trait.
     typedef _List_iterator<_Tp, _Tp &, _Tp *>             iterator;
     typedef _List_iterator<_Tp, const _Tp &, const _Tp *> const_iterator;
     typedef _List_iterator<_Tp, _Ref, _Ptr>             _Self;
@@ -86,6 +92,10 @@ struct _List_iterator : public _List_iterator_base {
     typedef _Ref reference;
     typedef _List_node<_Tp> _Node;
 
+    // the inheritance shows here. _Node is the derived class, but the 
+    // parameter of the constructor of _List_iterator_base accepts is the 
+    // base class of _List_node. Of course it is okay. the base class can 
+    // access only the member of its class, which is enough.
     _List_iterator(_Node *__x) : _List_iterator_base(__x) {}
     _List_iterator() {}
     _List_iterator(const iterator &__x) : _List_iterator_base(__x._M_node) {}
@@ -271,10 +281,14 @@ _List_base<_Tp, _Alloc>::clear() {
     while (__cur != _M_node) {
         _List_node<_Tp>* __tmp = __cur;
         __cur = (_List_node<_Tp>*) __cur->_M_next;
+        // destroy the payload, calling the destructor of it.
         _Destroy(&__tmp->_M_data);
+
+        // release the node. deallocate the memory.
         _M_put_node(__tmp);
     }
 
+    // reset the node pointer, pointing to itself.
     _M_node->_M_next = _M_node;
     _M_node->_M_prev = _M_node;
 }
@@ -456,6 +470,7 @@ public:
     void push_back(const _Tp &__x) {
         insert(end(), __x);
     }
+
     void push_back() {
         insert(end());
     }
@@ -622,11 +637,13 @@ operator==(const list<_Tp, _Alloc>& __x, const list<_Tp, _Alloc>& __y) {
     const_iterator __i1 = __x.begin();
     const_iterator __i2 = __y.begin();
 
+    // each element is equal
     while (__i1 != __end1 && __i2 != __end2 && *__i1 == *__i2) {
         ++__i1;
         ++__i2;
     }
 
+    // two lists have the same size.
     return __i1 == __end1 && __i2 == __end2;
 }
 
@@ -747,6 +764,7 @@ list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(const list<_Tp, _Alloc>& __x) {
         const_iterator __first2 = __x.begin();
         const_iterator __last2 = __x.end();
 
+        // utilize the space allocated before.
         while (__first1 != __last1 && __first2 != __last2) {
             *__first1++ = *__first2++;
         }

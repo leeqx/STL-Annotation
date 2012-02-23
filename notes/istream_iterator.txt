@@ -1,0 +1,9 @@
+The istream_iterator is sort of the input iterator. that is the only operation for it includes:
+    1. *        (dereference)
+    2. ->
+    3. ++       (prefix increasement)
+    4. ++(int)  (postfix increament)
+    5. ==       (equal)
+    6. !=       (unequal)
+
+There is a variable that holds the value from the input stream, and the iterator points the next unread one. so, while constructing the istream_iterator, one element has already read into, stored in the data member.

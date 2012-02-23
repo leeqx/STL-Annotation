@@ -1,0 +1,12 @@
+reallocation of the internal array of vector will invalidates all the 
+references, pointers, and iterator for element of the vector.
+
+insertion may invalidate reference, pointer, and reference of the element.
+
+The concept of capacity of vector is similar to that of string.
+
+If the vector is empty, calling front() and back() is undefined behaviors. So, you'd better test if it is empty, or use at().
+
+begin() just return an iterator, which is implementation defined. So refer the address of the first element of the array, use &*begin() instead. 
+
+You should always be aware of the invalidation of pointer, reference, and iterator

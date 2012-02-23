@@ -316,6 +316,7 @@ public:
         return current;
     }
     reference operator*() const {
+        // save the current pointer, return a temporary.
         _Iterator __tmp = current;
         return *--__tmp;
     }
@@ -326,6 +327,7 @@ public:
 #endif /* __SGI_STL_NO_ARROW_OPERATOR */
 
     _Self &operator++() {
+        // The internal pointer is move from right to left.
         --current;
         return *this;
     }
@@ -339,12 +341,15 @@ public:
         return *this;
     }
     _Self operator--(int) {
+        // using prefix increment and prefix decreasement is much more 
+        // faster.
         _Self __tmp = *this;
         ++current;
         return __tmp;
     }
 
     _Self operator+(difference_type __n) const {
+        // the substruction is provided from the random access iterator.
         return _Self(current - __n);
     }
     _Self &operator+=(difference_type __n) {
@@ -621,6 +626,7 @@ public:
 
     istream_iterator() : _M_stream(0), _M_ok(false) {}
     istream_iterator(istream_type &__s) : _M_stream(&__s) {
+        // the constructor will read the first element at once.
         _M_read();
     }
 
@@ -632,6 +638,8 @@ public:
     }
 
     istream_iterator &operator++() {
+        // calling the operator ++ member function will call the read 
+        // method, read an elment from the stream.
         _M_read();
         return *this;
     }
@@ -654,6 +662,7 @@ private:
         _M_ok = (_M_stream && *_M_stream) ? true : false;
 
         if (_M_ok) {
+            // read the value using the operator >>
             *_M_stream >> _M_value;
             _M_ok = *_M_stream ? true : false;
         }
@@ -715,6 +724,7 @@ public:
     }
 private:
     ostream_type *_M_stream;
+    // using as the delimeter. insert it after each insertion.
     const _CharT *_M_string;
 };
 
